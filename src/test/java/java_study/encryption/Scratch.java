@@ -13,6 +13,7 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.Security;
 import java.security.interfaces.RSAPrivateCrtKey;
+import java.security.interfaces.RSAPrivateKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
 import java.security.spec.RSAPrivateCrtKeySpec;
@@ -102,6 +103,7 @@ public class Scratch {
 			// kun je niet cast naar RSAPrivateCrtKey,
 		System.out.println(priv1.getClass());	// sun.security.rsa.RSAPrivateKeyImpl
 		
+		
 		// we hoeven alleen m,e,d,p,q,ep,eq,c op te slaan, en we kunnen herleiden een sun.security.rsa.RSAPrivateCrtKeyImpl
 		RSAPrivateCrtKeySpec privCrtSpec = fact.getKeySpec(priv, RSAPrivateCrtKeySpec.class);
 		BigInteger m_ = privCrtSpec.getModulus();
@@ -116,9 +118,13 @@ public class Scratch {
 		RSAPrivateCrtKeySpec privCrtSpec2 = new RSAPrivateCrtKeySpec(m_,e,d_,p,q,ep,eq,c);
 		PrivateKey priv2 = fact.generatePrivate(privCrtSpec2);
 		System.out.println(priv2.getClass());	// sun.security.rsa.RSAPrivateCrtKeyImpl
-		
+		// priv2.get...() // getEncoded(), getFormat(), getParams(), getAlgorithm(), 
+		// ((RSAPrivateKey)priv2).get...()   // 4 hierboven,  getModulus(), getPrivateExponent() 
+		// ((RSAPrivateCrtKey)priv2).get...() // 6 hierboven, getCrtCoefficient(), getPrimeExponentP(), getPrimeExponentQ(), getPrimeP(), getPrimeQ(), getPublicExponent()
 
 		
+		// factory		.getKeySpec()			.generatePrivate 			zijn elkaars invers,
+		// 	key	, Spec.class -> 	spec 			-> 			priv
 	}
 	
 	// video ch3, key generators
@@ -128,7 +134,7 @@ public class Scratch {
 		System.out.println(algorithms);
 		// [RC2, SUNTLSKEYMATERIAL, HMACSHA384, DESEDE, BLOWFISH, ARCFOUR, HMACSHA512/256, HMACSHA256, HMACSHA224, HMACMD5, HMACSHA512/224, AES, HMACSHA3-384, CHACHA20, SUNTLSPRF, HMACSHA512, SUNTLSRSAPREMASTERSECRET, DES, HMACSHA3-256, HMACSHA3-224, HMACSHA3-512, SUNTLSMASTERSECRET, HMACSHA1, SUNTLS12PRF]
 		KeyGenerator aesGen = KeyGenerator.getInstance("AES");
-		SecretKey key = aesGen.generateKey();
+		SecretKey key = aesGen.generateKey(); // javax.crypto.spec.SecretKeySpec
 		
 		System.out.println(key.getClass());// javax.crypto.spec.SecretKeySpec
 			// je hebt geen KeyFactory nodig, die is er ook niet voor AES
@@ -138,6 +144,8 @@ public class Scratch {
 		// dit is net als bij de private key in test2(), maar daar is key geen spec, TODO
 		int len=key.getEncoded().length*8;
 		System.out.println(len);// 128
+		
+		// public class SecretKeySpec implements KeySpec, SecretKey {
 		
 	}
 	
@@ -149,6 +157,7 @@ public class Scratch {
 		// [PBEWITHHMACSHA384ANDAES_128, PBEWITHSHA1ANDRC4_40, PBEWITHHMACSHA512ANDAES_256, DESEDE, PBEWITHHMACSHA512ANDAES_128, PBKDF2WITHHMACSHA1, PBKDF2WITHHMACSHA384, PBEWITHHMACSHA224ANDAES_256, DES, PBEWITHHMACSHA256ANDAES_128, PBEWITHMD5ANDDES, PBEWITHHMACSHA256ANDAES_256, PBKDF2WITHHMACSHA224, PBEWITHHMACSHA1ANDAES_128, PBEWITHSHA1ANDRC4_128, PBEWITHSHA1ANDDESEDE, PBKDF2WITHHMACSHA512, PBEWITHSHA1ANDRC2_128, PBEWITHSHA1ANDRC2_40, PBEWITHHMACSHA384ANDAES_256, PBEWITHHMACSHA1ANDAES_256, PBEWITHMD5ANDTRIPLEDES, PBEWITHHMACSHA224ANDAES_128, PBKDF2WITHHMACSHA256]
 		
 		KeyGenerator desGen = KeyGenerator.getInstance("DES");	// AES kan ook, zie test3(),
+		// desGen	javax.crypto.KeyGenerator  (id=87)	
 		SecretKey desKey = desGen.generateKey();
 		System.out.println(desKey.getClass());// com.sun.crypto.provider.DESKey
 			// bij AES was dit een SecretKeySpec, TODO
@@ -159,6 +168,10 @@ public class Scratch {
 		System.out.println(desKeySpec);// javax.crypto.spec.DESKeySpec@41e1e210
 		SecretKey desKey2 = desFact.generateSecret(desKeySpec);
 		assertThat(desKey2).isEqualTo(desKey);
+		
+		// factory		.getKeySpec()			.generateSecret 			zijn elkaars invers,
+		// 	key	, Spec.class -> 	spec 			-> 			key
+		
 		
 	}
 

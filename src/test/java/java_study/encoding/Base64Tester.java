@@ -112,7 +112,19 @@ public class Base64Tester {
 		String hs = Hex.encodeHexString(bs2);	
 		System.out.println(hs);	// e33186b2c0ed4ecd51a0d63566442616
 						// de hex string ipv base64 string, dit is de sessionId,
-		
+		System.out.println("---");
+		byte[] bs6 = "π".getBytes(StandardCharsets.UTF_8);
+		printHex(bs6);	// cf, 80,
+		String s6 = Base64.getEncoder().encodeToString(bs6);
+		System.out.println(s6); // z4A=
+		byte[] bs6_2 = Base64.getDecoder().decode(s6);
+		printHex(bs6_2);	// cf, 80, 
+		String s6_2 = new String(bs6_2,StandardCharsets.UTF_8);
+		System.out.println(s6_2); // π
+	}
+	
+	@Test
+	public void test4() {
 		
 	}
 
