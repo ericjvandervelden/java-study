@@ -14,6 +14,7 @@ import java.security.PublicKey;
 import java.security.Security;
 import java.security.interfaces.RSAPrivateCrtKey;
 import java.security.interfaces.RSAPrivateKey;
+import java.security.spec.AlgorithmParameterSpec;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
 import java.security.spec.RSAPrivateCrtKeySpec;
@@ -25,9 +26,9 @@ import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.DESKeySpec;
-import javax.crypto.spec.SecretKeySpec;
 
 import org.junit.jupiter.api.Test;
+
 
 public class Scratch {
 	
@@ -53,9 +54,12 @@ public class Scratch {
 		KeyPair pair = pairGen.generateKeyPair();
 		PrivateKey priv = pair.getPrivate();	// sun.security.rsa.RSAPrivateCrtKeyImpl
 		PublicKey pub = pair.getPublic();		// sun.security.rsa.RSAPublicKeyImpl
+		priv.getAlgorithm(); priv.getClass(); priv.getEncoded(); priv.getFormat();
+					// dit er er alleen maar met een PrivateKey, 
 		BigInteger primeExponentP = ((RSAPrivateCrtKey)priv).getPrimeExponentP();
 		// dit kan dus!
 		System.out.println(primeExponentP);
+		
 		
 		KeyFactory fact = KeyFactory.getInstance("RSA");
 		RSAPrivateCrtKeySpec privSpec = fact.getKeySpec(priv, RSAPrivateCrtKeySpec.class);
@@ -79,12 +83,94 @@ public class Scratch {
 		
 	}
 	
+	// rsa: PrivateKey priv= KeyPairGenerator.getInstance("RSA").generateKeyPair().getPrivate();
+	// interfaces: Key > PrivateKey, RSAKey > RSAPrivateKey > RSAPrivateCrtKey
+	// PrivateKey < Key, dus priv.getEncoded(), .getAlgorithm(), getFormat()
+	// RSAPrivateKey < RSAKey, dus ((RSAPrivateKey)priv).getModulus(), .getParams()
+	// RSAPrivateKey, dus ((RSAPrivateKey)priv).getPrivateExponent()
+	// RSAPrivateCrtKey, dus ((RSAPrivateCrtKey)priv).getPublicExponent, .getPrimeP(), .getPrimeQ(), ...
+	// tot zover qua programmeren (met interfaces),
+	// waar valt de code in, in welke classes?
+	
+// package sun.security.pkcs;
+// public class PKCS8Key implements PrivateKey {
+//    /* The key bytes, without the algorithm information */
+//    protected byte[] key;
+//    /* The encoded for the key. Created on demand by encode(). */
+//    protected byte[] encodedKey;
+//     /**
+//    * Returns the DER-encoded form of the key as a byte array,
+//    * or {@code null} if an encoding error occurs.
+//    */
+//   public byte[] getEncoded() {			/ DER-encoded
+//       byte[] b = getEncodedInternal();	/ de key moet gegenereerd worden; right klik in eclipse, References, Project om te volgen hoe het gaat,
+//       return (b == null) ? null : b.clone();
+//   }
+	
+// package sun.security.rsa;
+// public final class RSAPrivateKeyImpl extends PKCS8Key implements RSAPrivateKey {
+//     private final BigInteger n;         // modulus
+//    private final BigInteger d;         // private exponent
+	
+// package sun.security.rsa;
+// public final class RSAPrivateCrtKeyImpl
+//    extends PKCS8Key implements RSAPrivateCrtKey {
+//    	private BigInteger n;       // modulus
+//    	private BigInteger e;       // public exponent
+//    	private BigInteger d;       // private exponent
+//    	private BigInteger p;       // prime p
+//    	private BigInteger q;       // prime q
+//    	private BigInteger pe;      // prime exponent p
+//    	private BigInteger qe;      // prime exponent q
+//    	private BigInteger coeff;   // CRT coeffcient	
+	
+// package java.security.spec;
+// public class RSAPrivateKeySpec implements KeySpec {
+//    private final BigInteger modulus;
+//    private final BigInteger privateExponent;
+//    private final AlgorithmParameterSpec params;
+//    public BigInteger getModulus() {
+//    	return this.modulus;
+//	  }
+//    public BigInteger getPrivateExponent() {
+//        return this.privateExponent;
+//    }
+	
+//	public class RSAPrivateCrtKeySpec extends RSAPrivateKeySpec {
+//
+//	    private final BigInteger publicExponent;
+//	    private final BigInteger primeP;
+//	    private final BigInteger primeQ;
+//	    private final BigInteger primeExponentP;
+//	    private final BigInteger primeExponentQ;
+//	    private final BigInteger crtCoefficient;
+// en getters,
+	
+	
 	// video ch3, a simple key service
 	@Test
 	public void test2() throws NoSuchAlgorithmException, InvalidKeySpecException {
 		KeyPair pair=KeyPairGenerator.getInstance("RSA").generateKeyPair();
 		PrivateKey priv=pair.getPrivate();	// een sun.security.rsa.RSAPrivateCrtKeyImpl
-		RSAPrivateCrtKey privCrt = (RSAPrivateCrtKey)pair.getPrivate();		// heeft alle methods,
+		
+	
+//		priv	sun.security.rsa.RSAPrivateCrtKeyImpl  (id=78)	
+//			algid	sun.security.x509.AlgorithmId  (id=145)	
+//			coeff	java.math.BigInteger  (id=95)	
+//			d	java.math.BigInteger  (id=128)	
+//			e	java.math.BigInteger  (id=129)	
+//			encodedKey	(id=148)	
+//			key	(id=151)	
+//			keyParams	null	
+//			n	java.math.BigInteger  (id=99)	
+//			p	java.math.BigInteger  (id=126)	
+//			pe	java.math.BigInteger  (id=100)	
+//			q	java.math.BigInteger  (id=127)	
+//			qe	java.math.BigInteger  (id=101)	
+//			type	sun.security.rsa.RSAUtil$KeyType  (id=152)	
+		// maar heeft geen getters, 
+		// doe een cast, deze heeft wel getters,
+		RSAPrivateCrtKey privCrt = (RSAPrivateCrtKey)priv;		// heeft alle methods,
 		priv.getEncoded();
 		privCrt.getPrimeExponentP();
 		
@@ -93,19 +179,77 @@ public class Scratch {
 		// we hoeven alleen m,d op te slaan, en we kunnen herleiden een sun.security.rsa.RSAPrivateKeyImpl
 		KeyFactory fact  = KeyFactory.getInstance("RSA");
 		RSAPrivateKeySpec privSpec = fact.getKeySpec(priv, RSAPrivateKeySpec.class);
-		System.out.println(privSpec.getClass());// java.security.spec.RSAPrivateCrtKeySpec
+//		privSpec	java.security.spec.RSAPrivateCrtKeySpec  (id=89)	
+//			crtCoefficient	java.math.BigInteger  (id=95)	
+//			modulus	java.math.BigInteger  (id=99)	
+//			params	null	
+//			primeExponentP	java.math.BigInteger  (id=100)	
+//			primeExponentQ	java.math.BigInteger  (id=101)	
+//			primeP	java.math.BigInteger  (id=126)	
+//			primeQ	java.math.BigInteger  (id=127)	
+//			privateExponent	java.math.BigInteger  (id=128)	
+//			publicExponent	java.math.BigInteger  (id=129)
+		privSpec.getModulus();privSpec.getPrivateExponent(); privSpec.getParams();
+		// maar privSpec is een RSAPrivateCrtKeySpec, alleen heeft de getters niet,
+		RSAPrivateCrtKeySpec privSpec1 = (RSAPrivateCrtKeySpec)privSpec;
+		privSpec1.getModulus();privSpec1.getPrivateExponent(); privSpec1.getParams();
+		privSpec1.getCrtCoefficient();privSpec1.getPrimeExponentP();privSpec1.getPrimeExponentQ();
+		privSpec1.getPrimeP();privSpec1.getPrimeQ();privSpec1.getPublicExponent();
+		// privSpec1 heeft de getters wel,
+		// dus WH 
+		PrivateKey priv0 = fact.generatePrivate(privSpec); // inverse zie hieronder,
+		boolean b = priv0.equals(priv); // true, 
+		// privSpec heeft alle components, maar niet de getters, 
+		// dus als je de inverse neemt krijg je priv weer terug,
+		// alleen als je met de uitgebreide spec wilt werken kun je
+		// 1. cast doen zoals hierboven bij privSpec1, 
+		// 2. met andere spec class opvragen, zoals bij privCrtSpec hieronder 
+ 		System.out.println(privSpec.getClass());// java.security.spec.RSAPrivateCrtKeySpec
 		// maar de compile time type is RSAPrivateKeySpec, en geen RSAPrivateCrtKeySpec
 		BigInteger m = privSpec.getModulus();
 		BigInteger d = privSpec.getPrivateExponent();
+		AlgorithmParameterSpec pars = privSpec.getParams(); // er is ook een <init> met m,d,pars
+		
 		RSAPrivateKeySpec privSpec2 = new RSAPrivateKeySpec(m, d);
+		// we maken zelf een spec,
+		// dit is runtime echt een kleinere spec dan privSpec,
+		
 		PrivateKey priv1 = fact.generatePrivate(privSpec2);	
 			// sun.security.rsa.RSAPrivateKeyImpl, heeft alleen .getEncoded() der encoding, getAlgorithm(), ...
 			// kun je niet cast naar RSAPrivateCrtKey,
 		System.out.println(priv1.getClass());	// sun.security.rsa.RSAPrivateKeyImpl
+
+// priv1 is runtime een kleinere class dan priv==priv0
+// hieronder maken zelf een grotere spec privCrtSpec2, en die geeft wel een RSAPrivateCrtKeyImpl,
+//		priv1	sun.security.rsa.RSAPrivateKeyImpl  (id=100)	
+//			algid	sun.security.x509.AlgorithmId  (id=178)	
+//			d	java.math.BigInteger  (id=98)	
+//			encodedKey	(id=179)	
+//			key	(id=180)	
+//			keyParams	null	
+//			n	java.math.BigInteger  (id=94)	
+//			type	sun.security.rsa.RSAUtil$KeyType  (id=130)	
 		
+// hierboven hadden privSpec opgevraagd met RSAPrivateKeySpec.class, 
+// compile time krijg je een kleinere spec RSAPrivateKeySpec, 
+// maar runtime is het de grote RSAPrivateCrtKeySpec
+// en daarom krijg je met de inverse fact.generatePrivate 
+// toch de grote key RSAPrivateCrtKeyImpl 
+// maar als je met de hand new RSAPrivateKeySpec(m, d) maakt, 
+// maak je ook runtime een kleinere RSAPrivateKeySpec
+// en krijg je met de inverse fact.generatePrivate een kleinere RSAPrivateKeyImpl
+
+		boolean b0 = priv0.equals(priv1); // false, 
+			// priv0	sun.security.rsa.RSAPrivateCrtKeyImpl  (id=76)	
+			// priv1	sun.security.rsa.RSAPrivateKeyImpl  (id=100)	
 		
 		// we hoeven alleen m,e,d,p,q,ep,eq,c op te slaan, en we kunnen herleiden een sun.security.rsa.RSAPrivateCrtKeyImpl
+		// we maken privSpec hierboven zelf,
 		RSAPrivateCrtKeySpec privCrtSpec = fact.getKeySpec(priv, RSAPrivateCrtKeySpec.class);
+		boolean b1 = privSpec1.equals(privCrtSpec);	// false, 
+		// ze zijn gelijk, maar spec classes hebben zelf geen equals,
+		// en Object.equals is ==
+						
 		BigInteger m_ = privCrtSpec.getModulus();
 		BigInteger e = privCrtSpec.getPublicExponent();
 		BigInteger d_ = privCrtSpec.getPrivateExponent();
@@ -122,10 +266,26 @@ public class Scratch {
 		// ((RSAPrivateKey)priv2).get...()   // 4 hierboven,  getModulus(), getPrivateExponent() 
 		// ((RSAPrivateCrtKey)priv2).get...() // 6 hierboven, getCrtCoefficient(), getPrimeExponentP(), getPrimeExponentQ(), getPrimeP(), getPrimeQ(), getPublicExponent()
 
-		
+		// inverse,
 		// factory		.getKeySpec()			.generatePrivate 			zijn elkaars invers,
 		// 	key	, Spec.class -> 	spec 			-> 			priv
+	
+		// key's hebben wel een equals, spec's niet,
+		
+		boolean b2 = priv0.equals(priv2);		// true
+		System.out.println();
+		
 	}
+	
+	// bij aes geven ze de result key meteen in een spec af, 
+	// bij des ook in een DESKey(Impl), en in een spec,
+	// bij rsa ook in een PKCS8Key, maar ook in een spec,
+	// aes en des:
+	// SecretKey key = KeyGenerator.getInstance("AES/DES").generateKey();
+	// interface SecretKey < Key, die getEncoded(), getAlgorithm(), getFormat() heeft,
+	// aes: runtime = class SecretKeySpec, die met getEncoded() de byte[]key geeft (key material)
+	// des: runtime = class DESKeySpec, die met getEncoded() de byte[]key geeft (key material)
+	// verschil des, aes: er is ook een DESKey class, die ook byte[] key heeft, met getEncoded()
 	
 	// video ch3, key generators
 	@Test
@@ -139,13 +299,47 @@ public class Scratch {
 		System.out.println(key.getClass());// javax.crypto.spec.SecretKeySpec
 			// je hebt geen KeyFactory nodig, die is er ook niet voor AES
 			// bij DES krijg je hier een DESKey, dus geen spec, en daar is wel een KeyFactory,
-		key.getEncoded();
-		key.getAlgorithm();
+		byte[] encoded = key.getEncoded(); // key material,  = [89, -91, -104, -58, -40, -1, 92, -95, -68, 104, -34, 14, 89, -80, -21, 111]
+		String algorithm = key.getAlgorithm();	// "AES"
 		// dit is net als bij de private key in test2(), maar daar is key geen spec, TODO
-		int len=key.getEncoded().length*8;
+		int len=key.getEncoded().length*8;	// 128
 		System.out.println(len);// 128
 		
-		// public class SecretKeySpec implements KeySpec, SecretKey {
+		// KeyGenerator.getInstance("AES").generateKey() = runtime een SecretKeySpec class,
+		// compile time = SecretKey interface, met een getEncoded() bijv, 
+		// daarmee kun je dus programeren,
+		// runtime valt hij in de SecretKeySpec.getEncoded(),
+		// SecretKeySpec heeft een byte[]key en getEncoded() die key geeft,
+		// SecretKey < Key is een tag interface, 
+		// Key is een interface met getEncoded(), getAlgorithm(), getFormat()
+//		key	javax.crypto.spec.SecretKeySpec  (id=86)	
+//			algorithm	"AES" (id=79)	
+//			key	(id=93)	
+//				[0]	-65	
+//				[1]	-124	
+//				...
+		
+// package javax.crypto.spec;
+// public class SecretKeySpec implements KeySpec, SecretKey {
+//     private byte[] key;
+//     public byte[] getEncoded() {
+//        return this.key.clone();
+//    }	
+		
+// package java.security.spec;
+// public interface KeySpec { }		/ tag interface,
+
+// package javax.crypto;
+// public interface SecretKey extends
+//	    java.security.Key, javax.security.auth.Destroyable {
+// }
+// package java.security;
+// public interface Key extends java.io.Serializable {
+//     public String getAlgorithm();
+//     public String getFormat();
+//     public byte[] getEncoded();
+// }
+		
 		
 	}
 	
@@ -172,7 +366,99 @@ public class Scratch {
 		// factory		.getKeySpec()			.generateSecret 			zijn elkaars invers,
 		// 	key	, Spec.class -> 	spec 			-> 			key
 		
+		// we zien geen verschil tussen desKey en desKeySpec,
+//		desKey	com.sun.crypto.provider.DESKey  (id=84)	
+//			key	(id=94)	
+//				[0]	-70	
+//				[1]	52	
+//				[2]	2	
+//				[3]	13	
+//				[4]	50	
+//				[5]	19	
+//				[6]	-116	
+//				[7]	-92	
+//		desKeySpec	javax.crypto.spec.DESKeySpec  (id=91)	
+//			key	(id=117)	
+//				[0]	-70	
+//				[1]	52	
+//				[2]	2	
+//				[3]	13	
+//				[4]	50	
+//				[5]	19	
+//				[6]	-116	
+//				[7]	-92	
+
+		desKey.getEncoded(); //= key hierboven
+		DESKeySpec desKeySpec2 = (DESKeySpec)desKeySpec;
+		byte[] keyBytes = desKeySpec2.getKey();
 		
+		
+		// bij RSAPrivateKeySpec had je extra getters, zoals getModulus(), getPrivateExponent(),
+		// en nog meer als je RSAPrivateCrtKeySpec
+		// maar met DESKey kun je getEncoded(), net als bij een RSAPrivateKey 
+		// een DESKey van maken mbv. een SecretKeyFactory
+		// aesKey is een SecretKeySpec < <SecretKey < Key, dus heeft getEncoded(), 
+	
+		// KeyGenerator.getInstance("DES").generateKey() = runtime een DESKey
+		// compile time = SecretKey < Key interface, met een getEncoded() bijv, 
+		// en als je daarmee programeert valt hij in de DESKey.getEncoded(),
+		
+// aes werkt niet met zoiets als DESKey, alleen met SecretKeySpec ipv DESKeySpec,
+// je ziet ook dat DESKey helemaal niet nodig is, want DESKeySpec heeft ook de key 
+// en die krijg je via getEncoded().
+		
+// package com.sun.crypto.provider;
+// final class DESKey implements SecretKey {
+//    private byte[] key;
+//    public byte[] getEncoded() {
+//        // Return a copy of the key, rather than a reference,
+//        // so that the key data cannot be modified from outside
+//
+//        // The key is zeroized by finalize()
+//        // The reachability fence ensures finalize() isn't called early
+//        byte[] result = key.clone();
+//        Reference.reachabilityFence(this);
+//        return result;
+//    }
+// package javax.crypto;
+// public interface SecretKey extends
+//	    java.security.Key, javax.security.auth.Destroyable {
+// }
+// package java.security;
+// public interface Key extends java.io.Serializable {
+//    public String getAlgorithm();
+//     public String getFormat();
+//	    public byte[] getEncoded();
+// }
+//
+// package javax.crypto.spec;
+// public class DESKeySpec implements java.security.spec.KeySpec {
+//     private byte[] key;
+//     /**
+//	     * Returns the DES key material.
+//	     *
+//	     * @return the DES key material. Returns a new array
+//	     * each time this method is called.
+//	     */
+//     public byte[] getKey() {
+//        return this.key.clone();
+//    }
+	
+// package java.security.spec;
+// public interface KeySpec { }
+		
+// waar gevonden?		
+		// JRE System Library [ JavaSE-17]
+		// 	java.base
+		// 		com.sun.crypto.provider
+		//			DESKey.class
+	
+		// JRE System Library [ JavaSE-17]
+		// 	java.base
+		// 		javax.crypto.spec
+		// 			DESKeySpec
+
+	
 	}
 
 }
