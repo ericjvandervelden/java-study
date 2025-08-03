@@ -327,7 +327,7 @@ public class Scratch {
 //    }	
 		
 // package java.security.spec;
-// public interface KeySpec { }		/ tag interface,
+// public interface KeySpec { }		/ grouping interface,
 
 // package javax.crypto;
 // public interface SecretKey extends
