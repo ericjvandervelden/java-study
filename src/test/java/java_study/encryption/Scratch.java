@@ -189,6 +189,10 @@ public class Scratch {
 //			primeQ	java.math.BigInteger  (id=127)	
 //			privateExponent	java.math.BigInteger  (id=128)	
 //			publicExponent	java.math.BigInteger  (id=129)
+		KeySpec privSpec4 = fact.getKeySpec(priv, KeySpec.class);
+//		privSpec4	java.security.spec.PKCS8EncodedKeySpec  (id=122)	
+//			algorithmName null
+// 			encodedKey ...
 		privSpec.getModulus();privSpec.getPrivateExponent(); privSpec.getParams();
 		// maar privSpec is een RSAPrivateCrtKeySpec, alleen heeft de getters niet,
 		RSAPrivateCrtKeySpec privSpec1 = (RSAPrivateCrtKeySpec)privSpec;
@@ -200,7 +204,7 @@ public class Scratch {
 		PrivateKey priv0 = fact.generatePrivate(privSpec); // inverse zie hieronder,
 		boolean b = priv0.equals(priv); // true, 
 		// privSpec heeft alle components, maar niet de getters, 
-		// dus als je de inverse neemt krijg je priv weer terug,
+		// dus als je de inverse neemt krijg je runtime priv weer terug,
 		// alleen als je met de uitgebreide spec wilt werken kun je
 		// 1. cast doen zoals hierboven bij privSpec1, 
 		// 2. met andere spec class opvragen, zoals bij privCrtSpec hieronder 
@@ -230,7 +234,8 @@ public class Scratch {
 //			n	java.math.BigInteger  (id=94)	
 //			type	sun.security.rsa.RSAUtil$KeyType  (id=130)	
 		
-// hierboven hadden privSpec opgevraagd met RSAPrivateKeySpec.class, 
+// hierboven hadden privSpec opgevraagd met RSAPrivateKeySpec.class als 2de arg, en 
+		// de runtime grote RSAPrivateCrtKeyImpl priv als 1ste arg, 
 // compile time krijg je een kleinere spec RSAPrivateKeySpec, 
 // maar runtime is het de grote RSAPrivateCrtKeySpec
 // en daarom krijg je met de inverse fact.generatePrivate 
@@ -305,7 +310,7 @@ public class Scratch {
 		int len=key.getEncoded().length*8;	// 128
 		System.out.println(len);// 128
 		
-		// KeyGenerator.getInstance("AES").generateKey() = runtime een SecretKeySpec class,
+		// KeyGenerator.getInstance("AES").generateKey() = runtime een class SecretKeySpec,
 		// compile time = SecretKey interface, met een getEncoded() bijv, 
 		// daarmee kun je dus programeren,
 		// runtime valt hij in de SecretKeySpec.getEncoded(),
@@ -320,9 +325,9 @@ public class Scratch {
 //				...
 		
 // package javax.crypto.spec;
-// public class SecretKeySpec implements KeySpec, SecretKey {
+// public class SecretKeySpec implements KeySpec, SecretKey {	/ KeyGenerator.generateKey() maakt deze,
 //     private byte[] key;
-//     public byte[] getEncoded() {
+//     public byte[] getEncoded() {			/ interface SecretKey method,
 //        return this.key.clone();
 //    }	
 		
@@ -407,10 +412,16 @@ public class Scratch {
 // je ziet ook dat DESKey helemaal niet nodig is, want DESKeySpec heeft ook de key 
 // en die krijg je via getEncoded().
 		
+// KeyGenerator.generateKey maakt de key. KeyFactory maakt een (algemeen) interface voor deze key (spec), 
+// en kan ook vanuit de spec een key maken, maar het blijft een (algemeen) interface, 
+		
+// SecretKey is het (java) interface voor symm. keys, heeft de getEncoded() method, 
+// die = DER format van de key
+		
 // package com.sun.crypto.provider;
-// final class DESKey implements SecretKey {
+// final class DESKey implements SecretKey { / KeyGenerator.generateKey() maakt deze,
 //    private byte[] key;
-//    public byte[] getEncoded() {
+//    public byte[] getEncoded() {						/ interface SecretKey method,
 //        // Return a copy of the key, rather than a reference,
 //        // so that the key data cannot be modified from outside
 //
@@ -433,7 +444,7 @@ public class Scratch {
 //
 // package javax.crypto.spec;
 // public class DESKeySpec implements java.security.spec.KeySpec {
-//     private byte[] key;
+//     private byte[] key;		 / krijgt op een of andere manier uit DESKey,
 //     /**
 //	     * Returns the DES key material.
 //	     *
@@ -462,3 +473,120 @@ public class Scratch {
 	}
 
 }
+
+
+// Overzicht keys,
+
+//package java.security;
+//public interface Key extends java.io.Serializable {
+//	public String getAlgorithm();
+//	public String getFormat();
+//	public byte[] getEncoded();
+//	>
+//	package java.security;
+//	public interface PrivateKey extends Key, javax.security.auth.Destroyable {	/ grouping interface,
+//		>
+//		package sun.security.pkcs;
+//		public class PKCS8Key implements PrivateKey {
+//			protected AlgorithmId algid;
+//			/* The key bytes, without the algorithm information */
+//    			protected byte[] key;
+//			/* The encoded for the key. Created on demand by encode(). */
+//    			protected byte[] encodedKey;
+//		>
+//		package java.security.interfaces;
+//		public interface RSAPrivateKey extends java.security.PrivateKey, RSAKey
+//			public BigInteger getPrivateExponent();
+//			>
+//			package sun.security.rsa;
+//			public final class RSAPrivateKeyImpl extends PKCS8Key implements RSAPrivateKey {
+//				private final BigInteger n;         // modulus
+//    				private final BigInteger d;         // private exponent
+//				public BigInteger getModulus()
+//				public BigInteger getPrivateExponent() {
+//			>
+//			package java.security.interfaces;
+//			public interface RSAPrivateCrtKey extends RSAPrivateKey {
+//				private final BigInteger n;         // modulus
+//    				private final BigInteger d;         // private exponent
+//				...
+//				public BigInteger getPublicExponent();
+//				public BigInteger getPrimeP();
+//				public BigInteger getPrimeQ();
+//				public BigInteger getPrimeExponentP();
+//				public BigInteger getPrimeExponentQ();
+//				public BigInteger getCrtCoefficient();				
+//				>
+//				package sun.security.rsa;
+//				public final class RSAPrivateCrtKeyImpl extends PKCS8Key implements RSAPrivateCrtKey {
+//					/ overrides niet RSAPrivateKeyImpl, heeft ook getModulus(), getPrivateExponent()
+//package java.security;
+//public interface Key extends java.io.Serializable {
+//	public String getAlgorithm();
+//	public String getFormat();
+//	public byte[] getEncoded();
+//	>
+//	package javax.crypto;
+//	public interface SecretKey extends java.security.Key, javax.security.auth.Destroyable {		/ grouping interface
+//		>
+//		package com.sun.crypto.provider;
+//		final class DESKey implements SecretKey {
+//			private byte[] key;
+//			public byte[] getEncoded() {
+//			...
+//		>
+// 		package javax.crypto.spec;
+//		public class SecretKeySpec implements KeySpec, SecretKey {
+//			private byte[] key;
+//			public byte[] getEncoded() {
+//			...
+
+// Overzicht specs,
+
+//package java.security.spec;
+//public interface KeySpec { }	/ grouping interface
+//	>
+//	package javax.crypto.spec;
+//	public class DESKeySpec implements java.security.spec.KeySpec {
+//		private byte[] key;
+//		public byte[] getKey() {		/ heeft geen getEncoded() zoals SecretKeySpec,
+//	>
+//	package java.security.spec;
+//	public class RSAPrivateKeySpec implements KeySpec {
+//		private final BigInteger modulus;
+//		private final BigInteger privateExponent;
+//		public BigInteger getModulus() {
+//		public BigInteger getPrivateExponent() {
+//	>
+//	package java.security.spec;
+//	public class RSAPublicKeySpec implements KeySpec {
+//		private final BigInteger modulus;
+//		private final BigInteger publicExponent;
+//		public BigInteger getModulus() {
+//		public BigInteger getPublicExponent() {
+//	>
+//	package javax.crypto.spec;
+//	public class SecretKeySpec implements KeySpec, SecretKey {		/ heeft geen getKey() zoals DESKeySpec
+//		private byte[] key;
+//		public String getAlgorithm() {
+//		public String getFormat() {
+//		public byte[] getEncoded() {
+
+// key -> spec -> key
+
+//KeyPairGenerator pairGen = KeyPairGenerator.getInstance("RSA");		
+//KeyPair pair = pairGen.generateKeyPair();
+//PrivateKey priv = pair.getPrivate();	/ runtime sun.security.rsa.RSAPrivateCrtKeyImpl
+//RSAPrivateCrtKey privCrt = (RSAPrivateCrtKey)priv;	/ OK, 
+//KeyFactory fact  = KeyFactory.getInstance("RSA");
+//
+//RSAPrivateKeySpec privSpec = fact.getKeySpec(priv, RSAPrivateKeySpec.class); / runtime RSAPrivateCrtKeySpec
+//RSAPrivateCrtKeySpec privSpec1 = (RSAPrivateCrtKeySpec)privSpec; / OK,
+//
+//KeySpec privSpec4 = fact.getKeySpec(priv, KeySpec.class);	/ runtime PKCS8EncodedKeySpec
+//
+//PrivateKey priv0 = fact.generatePrivate(privSpec); // inverse zie hieronder,
+//boolean b = priv0.equals(priv); / true,
+// TODO afmaken
+
+
